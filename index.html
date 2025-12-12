@@ -1,302 +1,97 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Robot Scheduler — Qrok / Grok Demo</title>
+<meta charset="UTF-8">
+<title>Robot Auto Qroc Display</title>
 <style>
-  :root{
-    --bg:#0f1724;
-    --card:#0b1220;
-    --accent:#7c3aed;
-    --soft:#94a3b8;
-  }
-  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
-  body{
-    background: radial-gradient(1200px 600px at 10% 10%, rgba(124,58,237,0.09), transparent),
-                radial-gradient(900px 400px at 90% 90%, rgba(14,165,233,0.04), transparent),
-                var(--bg);
-    color:#e6eef8;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:32px;
+  body {
+    margin: 0;
+    background: #0a0014;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: white;
   }
 
-  .stage{
-    width:860px;
-    max-width:95%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border-radius:16px;
-    padding:28px;
-    box-shadow: 0 10px 30px rgba(2,6,23,0.6);
-    display:flex;
-    gap:28px;
-    align-items:center;
+  .robot {
+    width: 240px;
+    animation: lookAround 6s infinite;
   }
 
-  /* Robot column */
-  .robot-wrap{
-    width:360px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    position:relative;
-    padding:12px;
+  @keyframes lookAround {
+    0% { transform: rotate(0deg); }
+    20% { transform: rotate(10deg); }
+    40% { transform: rotate(-15deg); }
+    60% { transform: rotate(0deg); }
+    80% { transform: rotate(8deg); }
+    100% { transform: rotate(0deg); }
   }
 
-  /* Simple SVG robot style */
-  svg.robot{ width:260px; height:260px; overflow:visible; }
-  .head { transform-origin: 50% 35%; transition: transform 600ms cubic-bezier(.2,.9,.3,1); }
-  .eye { transition: transform 350ms cubic-bezier(.2,.9,.3,1); transform-origin: center; }
-  .blink { transition: opacity 120ms linear; }
-
-  /* Text card */
-  .card{
-    flex:1;
-    min-height:160px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
-    border-radius:12px;
-    padding:20px;
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-    position:relative;
-    overflow:hidden;
-  }
-
-  .title{font-weight:600;color:var(--soft);font-size:14px;}
-  .status{font-size:13px;color:var(--soft);}
-
-  .answer-wrap{
-    margin-top:auto;
-    position:relative;
-    height:96px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-
-  .answer {
-    padding:18px 22px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border-radius:10px;
-    box-shadow: 0 6px 14px rgba(2,6,23,0.55);
-    max-width:100%;
-    opacity:0;
-    transform: translateY(12px) scale(0.985);
-    transition: opacity 420ms ease, transform 420ms cubic-bezier(.2,.9,.3,1);
-    font-size:15px;
-    line-height:1.35;
-  }
-
-  .answer.visible{
-    opacity:1;
-    transform: translateY(0) scale(1);
-  }
-
-  .small-note{font-size:12px;color:var(--soft); margin-top:6px;}
-
-  /* Tiny controls (debug) */
-  .controls{position:absolute;left:12px;bottom:12px; font-size:12px;color:var(--soft);}
-  button.btn{
-    background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:var(--soft);cursor:pointer;
-  }
-
-  /* Robot animation helper classes applied by JS */
-  .look-around .head{ transform: rotate(-8deg); }
-  .look-side .head{ transform: rotate(18deg); }
-  .look-away .head{ transform: rotate(6deg) scale(0.98); }
-
-  .eyes-left .eye-left { transform: translateX(-6px) translateY(1px) scale(0.98); }
-  .eyes-right .eye-right { transform: translateX(8px) translateY(0px) scale(0.98); }
-
-  /* small responsive */
-  @media (max-width:900px){
-    .stage{flex-direction:column; padding:18px;}
-    .robot-wrap{order:0;}
+  #textBox {
+    position: absolute;
+    bottom: 10%;
+    width: 80%;
+    text-align: center;
+    font-size: 22px;
+    opacity: 0;
+    transition: opacity 1.5s ease;
   }
 </style>
 </head>
 <body>
-  <div class="stage" role="region" aria-label="robot scheduler">
-    <div class="robot-wrap" id="robotWrap">
-      <!-- Simple friendly robot (SVG) -->
-      <svg class="robot" viewBox="0 0 200 200" aria-hidden="true">
-        <!-- body -->
-        <g transform="translate(0,10)">
-          <rect x="45" y="70" rx="12" ry="12" width="110" height="86" fill="#0e1622" stroke="rgba(255,255,255,0.04)"/>
-          <!-- head group -->
-          <g class="head" id="robotHead" transform="translate(0,-4)">
-            <rect x="52" y="10" rx="16" ry="16" width="96" height="64" fill="#0b1320" stroke="rgba(255,255,255,0.05)"/>
-            <!-- left eye -->
-            <g class="eye eye-left" id="eyeLeft" transform="translate(0,0)">
-              <circle cx="86" cy="40" r="8" fill="#0f1724" stroke="rgba(255,255,255,0.06)" />
-              <circle cx="82" cy="38" r="3.2" fill="#9be7ff" />
-            </g>
-            <!-- right eye -->
-            <g class="eye eye-right" id="eyeRight" transform="translate(0,0)">
-              <circle cx="114" cy="40" r="8" fill="#0f1724" stroke="rgba(255,255,255,0.06)" />
-              <circle cx="110" cy="38" r="3.2" fill="#9be7ff" />
-            </g>
-            <!-- antenna -->
-            <rect x="92" y="-6" rx="2" ry="2" width="16" height="10" fill="#172033"/>
-            <circle cx="100" cy="-10" r="4" fill="#7c3aed" />
-          </g>
 
-          <!-- mouth (blink) -->
-          <rect x="80" y="54" width="40" height="6" rx="3" fill="rgba(255,255,255,0.02)" class="blink" id="mouth"/>
+<img src="https://i.imgur.com/8Qwq1nF.png" class="robot" />
 
-          <!-- arms / legs decorative -->
-          <rect x="20" y="94" width="20" height="8" rx="3" fill="#0b1320"/>
-          <rect x="160" y="94" width="20" height="8" rx="3" fill="#0b1320"/>
-        </g>
-      </svg>
-    </div>
-
-    <div class="card">
-      <div class="title">Qrok Scheduler</div>
-      <div class="status" id="status">Idle — waiting for next scheduled question...</div>
-
-      <div class="answer-wrap">
-        <div class="answer" id="answerBox" aria-live="polite"></div>
-      </div>
-
-      <div class="small-note">Questions rotate every <strong>3 minutes</strong>. Answers appear for <strong>7 seconds</strong>.</div>
-
-      <div class="controls" title="debug">
-        <!-- optional debug controls -->
-        <button class="btn" id="runNow">Run now</button>
-      </div>
-    </div>
-  </div>
+<div id="textBox"></div>
 
 <script>
-/*
-  Behavior:
-  - questions[] : list of scheduled user questions (rotates).
-  - Every 3 minutes a sequence runs:
-      1) robot 'looks around' animation (1.8s)
-      2) robot 'looks to side' (1.2s)
-      3) call /api/qrok { question }
-      4) show answer for 7s, then hide
-      5) smooth transition to reset and wait for next 3-minute tick
-  - initial run occurs on load
-*/
-
 const questions = [
-  "Tell me about something interesting about crypto.",
-  "Tell me a recent economic report.",
+  "Tell me something interesting about crypto.",
+  "Tell me the most recent economic report summary.",
   "Give me a trading advice.",
   "What should we be cautious about while trading?"
 ];
 
-const RUN_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes
-const ANSWER_VISIBLE_MS = 7 * 1000; // 7 seconds
+let index = 0;
 
-const robotWrap = document.getElementById('robotWrap');
-const head = document.getElementById('robotHead');
-const eyeLeft = document.getElementById('eyeLeft');
-const eyeRight = document.getElementById('eyeRight');
-const answerBox = document.getElementById('answerBox');
-const status = document.getElementById('status');
-const runNow = document.getElementById('runNow');
+async function runCycle() {
+  const q = questions[index];
+  index = (index + 1) % questions.length;
 
-let questionIndex = 0;
-let scheduledInterval = null;
-let running = false;
+  // Ask Cloudflare function
+  const res = await fetch(`/ask?q=` + encodeURIComponent(q));
+  let text = "Error: Unable to contact AI";
 
-function setStatus(t){ status.textContent = t; }
+  if (res.ok) text = await res.text();
 
-async function fetchAnswer(question){
-  setStatus('Contacting AI for: "' + question + '"');
-  try {
-    const res = await fetch('/api/qrok', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({question})
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error('Server error: ' + res.status + ' ' + txt);
-    }
-    const j = await res.json();
-    // Expecting { answer: "text" }
-    return (j && j.answer) ? j.answer : JSON.stringify(j);
-  } catch (err){
-    console.error('fetchAnswer error', err);
-    return "Error contacting AI: " + (err.message||String(err));
-  }
+  showText(text);
+
+  // Text visible for 7 seconds
+  setTimeout(() => hideText(), 7000);
 }
 
-function showAnswerNow(text){
-  answerBox.innerText = text;
-  answerBox.classList.add('visible');
-  setStatus('Answer visible');
-  // hide after ANSWER_VISIBLE_MS
-  setTimeout(()=> {
-    answerBox.classList.remove('visible');
-    setStatus('Answer hidden — sequence will restart shortly');
-    // small transition back to idle handled by animation reset
-    resetRobotPose();
-  }, ANSWER_VISIBLE_MS);
+// Fade-in
+function showText(t) {
+  const box = document.getElementById("textBox");
+  box.innerText = t;
+  box.style.opacity = 1;
 }
 
-function resetRobotPose(){
-  robotWrap.classList.remove('look-around','look-side','look-away','eyes-left','eyes-right');
+// Fade-out
+function hideText() {
+  const box = document.getElementById("textBox");
+  box.style.opacity = 0;
 }
 
-async function runSequence(question){
-  if (running) return;
-  running = true;
-  setStatus('Sequence started');
-  // 1) look around
-  resetRobotPose();
-  robotWrap.classList.add('look-around','eyes-left');
-  await new Promise(r => setTimeout(r, 1800));
-  // 2) look to side
-  robotWrap.classList.remove('look-around','eyes-left');
-  robotWrap.classList.add('look-side','eyes-right');
-  await new Promise(r => setTimeout(r, 1200));
-  // 3) short look-away to show 'thinking'
-  robotWrap.classList.remove('eyes-right');
-  robotWrap.classList.add('look-away');
-  setStatus('Thinking...');
-  // 4) call API
-  const answer = await fetchAnswer(question);
-  // 5) show answer for 7s
-  showAnswerNow(answer);
-  // Wait additional small time for fadeout to finish before marking not running
-  await new Promise(r => setTimeout(r, ANSWER_VISIBLE_MS + 300));
-  running = false;
-  setStatus('Idle — waiting for next scheduled question...');
-}
+// Start immediately
+runCycle();
 
-function scheduleLoop(){
-  if (scheduledInterval) clearInterval(scheduledInterval);
-  scheduledInterval = setInterval(() => {
-    const q = questions[questionIndex % questions.length];
-    questionIndex++;
-    runSequence(q);
-  }, RUN_INTERVAL_MS);
-}
-
-// Attach manual run button
-runNow.addEventListener('click', async () => {
-  const q = questions[questionIndex % questions.length];
-  questionIndex++;
-  runSequence(q);
-});
-
-// initial run
-(async function init(){
-  // run immediately on load
-  const q = questions[questionIndex % questions.length];
-  questionIndex++;
-  runSequence(q);
-  // start interval
-  scheduleLoop();
-})();
+// Repeat every 3 minutes (180,000 ms)
+setInterval(runCycle, 180000);
 </script>
+
 </body>
 </html>
